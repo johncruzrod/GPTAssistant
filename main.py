@@ -60,11 +60,16 @@ if st.button('Submit Question'):
                 # Append user question to conversation history
                 st.session_state['conversation'].append(("User", user_question))
                 
+                assistant_response = None
                 for message in result.data:
                     if message.role == "assistant":
-                        # Append assistant response to conversation history
-                        st.session_state['conversation'].append(("Assistant", message.content[0].text.value))
+                        assistant_response = message.content[0].text.value
+                        break
                         
+                if assistant_response:
+                    # Append assistant response to conversation history
+                    st.session_state['conversation'].append(("Assistant", assistant_response))
+                    
                 # Display conversation history
                 for speaker, message in st.session_state['conversation']:
                     st.markdown(f"**{speaker}**: {message}")
