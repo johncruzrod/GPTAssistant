@@ -18,7 +18,7 @@ def run_assistant(question, file=None, thread_id=None):
 
     if file is not None:
         # Upload the file to OpenAI
-        file_obj = client.beta.files.create(file=file, purpose="fine-tune")
+        file_obj = client.beta.files.create(file=file.read(), purpose="user_message")
         file_id = file_obj.id
 
         # Add user's question and file reference to the thread
@@ -26,7 +26,7 @@ def run_assistant(question, file=None, thread_id=None):
             thread_id=thread_id,
             role="user",
             content=question,
-            file_ids=[file_id]
+            files=[{"id": file_id, "name": file.name}]
         )
     else:
         # Add user's question to the thread
