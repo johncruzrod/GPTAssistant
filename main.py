@@ -1,70 +1,61 @@
+import openai
 import streamlit as st
-from openai import OpenAI, AssistantEventHandler
-from typing_extensions import override
+from openai import OpenAI
+from openai.types.beta.threads import Text, TextDelta
 
-# Use Streamlit's secret management to safely store and access your API key
-api_key = st.secrets["OPENAI_API_KEY"]
-client = OpenAI(api_key=api_key)
+# Initialize the OpenAI client
+openai.api_key = st.secrets["OPENAI_API_KEY"]
+client = OpenAI()
 
-assistant_id = "asst_s0ZnaVjEm8CnagISufIAQ1in"
+# Set up the Streamlit UI
+st.title('Chat with OpenAI Assistant')
 
-class EventHandler(AssistantEventHandler):
-    def __init__(self):
-        self.report = []
-        self.__stream = None  # Add this line
-        
-    def _init(self, stream):
-        self.__stream = stream
+# Placeholder for the assistant's responses
+response_placeholder = st.empty()
 
-    @override
-    def on_text_created(self, text) -> None:
-        self.report.append(f"\n\nAssistant: ")
-        
-    @override
-    def on_text_delta(self, delta, snapshot):
-        self.report[-1] += delta.value
-        response_placeholder.markdown(''.join(self.report))  # Update the response placeholder
-
-    def on_tool_call_created(self, tool_call):
-        self.report.append(f"\n\nAssistant used tool: {tool_call.type}\n")
-
-    def on_tool_call_delta(self, delta, snapshot):
-        if delta.type == 'code_interpreter':
-            if delta.code_interpreter.input:
-                self.report[-1] += delta.code_interpreter.input
-            if delta.code_interpreter.outputs:
-                self.report[-1] += "\nOutput:\n"
-                for output in delta.code_interpreter.outputs:
-                    if output.type == "logs":
-                        self.report[-1] += f"\n{output.logs}"
-
-st.title("OpenAI Assistant Conversation")
-
-if 'thread_id' not in st.session_state:
+# Function to handle the conversation
+def talk_to_assistant(question, event_handler):
+    # Start a new thread for each conversation
     thread = client.beta.threads.create()
-    st.session_state['thread_id'] = thread.id
-
-user_input = st.text_input("Enter your message:", key="input")
-uploaded_file = st.file_uploader("Choose a file to attach (optional)")
-
-if st.button("Send"):
-    if uploaded_file is not None:
-        file_name = uploaded_file.name
-        file_content = uploaded_file.read().decode("utf-8")
-        client.beta.threads.messages.create(thread_id=st.session_state['thread_id'], role="user", content=user_input, files=[{"name": file_name, "content": file_content}])
-    else:
-        client.beta.threads.messages.create(thread_id=st.session_state['thread_id'], role="user", content=user_input)
-    
-    event_handler = EventHandler()
-    
-    response_placeholder = st.empty()
-    
-    with client.beta.threads.runs.stream(
-        thread_id=st.session_state['thread_id'],
-        assistant_id=assistant_id,
-        event_handler=event_handler,
+    # Add a message to the thread
+    message = client.beta.threads.messages.create(
+        thread_id=thread.id,
+        role="user",
+        content=question
+    )
+    # Stream the response
+    with client.beta.threads.runs.create_and_run_stream(
+        thread_id=thread.id,
+        assistant_id="asst_s0ZnaVjEm8CnagISufIAQ1in",
+        model="gpt-4-turbo-preview",
+        event_handler=event_handler
     ) as stream:
-        stream.until_done()  # Wait for the stream to complete
+        for event in stream:
+            if event.type == "thread.message.delta" and event.data.delta.content:
+                text_content = event.data.delta.content[0].text
+                response_placeholder.markdown(f'**AI**: {text_content}', unsafe_allow_html=True)
 
-    st.session_state["input"] = ""  # Clear the input field
-    uploaded_file = None  # Reset the uploaded file
+# Define the EventHandler class for streaming
+class EventHandler:
+    def __init__(self, placeholder):
+        self.placeholder = placeholder
+        self.responses = []
+
+    def on_text_delta(self, delta: TextDelta, snapshot: Text):
+        # Accumulate text deltas and update the Streamlit placeholder
+        self.responses.append(delta.value)
+        new_text = "".join(self.responses)
+        self.placeholder.markdown(f'**AI**: {new_text}', unsafe_allow_html=True)
+
+# User input
+user_input = st.text_input("Ask a question to the Assistant:", key='input')
+
+if st.button('Send') and user_input:
+    # Clear previous responses
+    response_placeholder.markdown('')
+    # Display user's question
+    st.write(f'**You**: {user_input}')
+    # Handle the conversation
+    talk_to_assistant(user_input, EventHandler(response_placeholder))
+    # Reset the input box after sending the message
+    st.session_state['input'] = ''
