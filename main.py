@@ -40,8 +40,10 @@ def run_assistant(question, thread_id=None):
 
 # Streamlit UI setup
 st.title('OpenAI Assistant Interaction')
+
 if 'thread_id' not in st.session_state:
     st.session_state['thread_id'] = None
+    st.session_state['conversation'] = []
 
 user_question = st.text_input("Enter your question here:", placeholder="Type your question...")
 
@@ -49,12 +51,20 @@ if st.button('Submit Question'):
     if user_question:
         with st.spinner('Waiting for the assistant to respond...'):
             result, st.session_state['thread_id'] = run_assistant(user_question, st.session_state['thread_id'])
+            
             if isinstance(result, str):
                 st.error(result)
             else:
+                # Append user question to conversation history
+                st.session_state['conversation'].append(("User", user_question))
+                
                 for message in result.data:
                     if message.role == "assistant":
-                        # Display each assistant message in Markdown format
-                        st.markdown(f"**Assistant**: {message.content[0].text.value}")
+                        # Append assistant response to conversation history
+                        st.session_state['conversation'].append(("Assistant", message.content[0].text.value))
+                        
+                # Display conversation history
+                for speaker, message in st.session_state['conversation']:
+                    st.markdown(f"**{speaker}**: {message}")
     else:
         st.error("Please enter a question to submit.")
