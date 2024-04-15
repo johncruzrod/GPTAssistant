@@ -21,7 +21,7 @@ def run_assistant(question, file=None, thread_id=None):
         messages = [{
             "role": "user",
             "content": question,
-            "file_ids": [file_info['id']] if file_info else []
+            "file_id": file_info['id'] if file_info else None
         }]
         thread = client.beta.threads.create(messages=messages)
         thread_id = thread.id
@@ -32,7 +32,7 @@ def run_assistant(question, file=None, thread_id=None):
             thread_id=thread_id,
             role="user",
             content=question,
-            file_ids=[file_info['id']] if file_info else []
+            file_id=file_info['id'] if file_info else None
         )
 
     # Create and poll a run
@@ -64,15 +64,14 @@ for message in st.session_state.messages:
         st.markdown(message["content"])
 
 user_question = st.chat_input("What is up?")
-uploaded_file = st.file_uploader("Upload a file (optional)")
 
 if user_question:
+    uploaded_file = st.file_uploader("Upload a file (optional)")
     st.session_state.messages.append({"role": "user", "content": user_question})
     with st.chat_message("user"):
         st.markdown(user_question)
         if uploaded_file is not None:
             st.write("Uploaded file:", uploaded_file.name)
-
     with st.chat_message("assistant"):
         with st.spinner('Waiting for the assistant to respond...'):
             result, st.session_state['thread_id'] = run_assistant(user_question, uploaded_file, st.session_state['thread_id'])
