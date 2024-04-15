@@ -43,6 +43,8 @@ st.title('OpenAI Assistant Interaction')
 
 if 'thread_id' not in st.session_state:
     st.session_state['thread_id'] = None
+    
+if 'conversation' not in st.session_state:
     st.session_state['conversation'] = []
 
 user_question = st.text_input("Enter your question here:", placeholder="Type your question...")
