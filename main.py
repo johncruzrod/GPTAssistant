@@ -38,6 +38,15 @@ def run_assistant(question, thread_id=None):
     else:
         return f"Run status: {run.status}", thread_id
 
+# Function to display conversation history
+def display_conversation_history():
+    for i in range(len(st.session_state['conversation']) - 1, -1, -2):
+        speaker, message = st.session_state['conversation'][i]
+        st.markdown(f"**{speaker}**: {message}")
+        if i > 0:
+            speaker, message = st.session_state['conversation'][i-1]
+            st.markdown(f"**{speaker}**: {message}")
+
 # Streamlit UI setup
 st.title('OpenAI Assistant Interaction')
 
@@ -55,12 +64,7 @@ if st.button('Submit Question'):
         st.session_state['conversation'].append(("User", user_question))
         
         # Display conversation history
-        for i in range(len(st.session_state['conversation']) - 1, -1, -2):
-            speaker, message = st.session_state['conversation'][i]
-            st.markdown(f"**{speaker}**: {message}")
-            if i > 0:
-                speaker, message = st.session_state['conversation'][i-1]
-                st.markdown(f"**{speaker}**: {message}")
+        display_conversation_history()
         
         with st.spinner('Waiting for the assistant to respond...'):
             result, st.session_state['thread_id'] = run_assistant(user_question, st.session_state['thread_id'])
@@ -75,18 +79,13 @@ if st.button('Submit Question'):
                         break
                         
                 if assistant_response:
-                    # Append assistant response to conversation history
-                    st.session_state['conversation'].append(("Assistant", assistant_response))
+                    # Insert assistant response at the correct position in conversation history
+                    st.session_state['conversation'].insert(-1, ("Assistant", assistant_response))
                     
-                    # Display the latest assistant response
-                    st.markdown(f"**Assistant**: {assistant_response}")
+                    # Display updated conversation history
+                    display_conversation_history()
     else:
         st.error("Please enter a question to submit.")
         
         # Display conversation history
-        for i in range(len(st.session_state['conversation']) - 1, -1, -2):
-            speaker, message = st.session_state['conversation'][i]
-            st.markdown(f"**{speaker}**: {message}")
-            if i > 0:
-                speaker, message = st.session_state['conversation'][i-1]
-                st.markdown(f"**{speaker}**: {message}")
+        display_conversation_history()
