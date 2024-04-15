@@ -68,8 +68,8 @@ if prompt := st.chat_input("What is up?"):
 
     with st.chat_message("assistant"):
         try:
-            result, st.session_state['thread_id'] = run_assistant(prompt, st.session_state['thread_id'])
-            response = result.data[-1].content[0].text.value
+            result, st.session_state['thread_id'], response = run_assistant(prompt, st.session_state['thread_id'])
+            st.markdown(response)
             st.session_state.messages.append(
                 {"role": "assistant", "content": response}
             )
@@ -78,7 +78,4 @@ if prompt := st.chat_input("What is up?"):
             Oops! Sorry, I can't talk now. Too many people have used
             this service recently.
             """
-            st.session_state.messages.append(
-                {"role": "assistant", "content": rate_limit_message}
-            )
-            st.rerun()
+            st.error(rate_limit_message)
