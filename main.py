@@ -21,7 +21,7 @@ def run_assistant(question, file=None, thread_id=None):
         messages = [{
             "role": "user",
             "content": question,
-            "file_id": file_info['id'] if file_info else None
+            "file_ids": [file_info['id']] if file_info else []
         }]
         thread = client.beta.threads.create(messages=messages)
         thread_id = thread.id
@@ -32,7 +32,7 @@ def run_assistant(question, file=None, thread_id=None):
             thread_id=thread_id,
             role="user",
             content=question,
-            file_id=file_info['id'] if file_info else None
+            file_ids=[file_info['id']] if file_info else []
         )
 
     # Create and poll a run
