@@ -15,20 +15,17 @@ def run_assistant(question, thread_id=None):
     else:
         # Use the existing thread to maintain conversation context
         thread_id = thread_id
-
     # Add user's question to the thread
     client.beta.threads.messages.create(
         thread_id=thread_id,
         role="user",
         content=question
     )
-
     # Create and poll a run
     run = client.beta.threads.runs.create_and_poll(
         thread_id=thread_id,
         assistant_id="asst_s0ZnaVjEm8CnagISufIAQ1in"
     )
-
     # Retrieve messages only if the run is completed
     if run.status == 'completed':
         messages = client.beta.threads.messages.list(
@@ -40,21 +37,48 @@ def run_assistant(question, thread_id=None):
 
 # Streamlit UI setup
 st.title('OpenAI Assistant Interaction')
+
+with st.expander("ℹ️ Disclaimer"):
+    st.caption(
+        """We appreciate your engagement! Please note, this demo is designed to
+        process a maximum of 10 interactions and may be unavailable if too many
+        people use the service concurrently. Thank you for your understanding.
+        """
+    )
+
 if 'thread_id' not in st.session_state:
     st.session_state['thread_id'] = None
+if "messages" not in st.session_state:
+    st.session_state.messages = []
+if "max_messages" not in st.session_state:
+    # Counting both user and assistant messages, so 10 rounds of conversation
+    st.session_state.max_messages = 20
 
-user_question = st.text_input("Enter your question here:", placeholder="Type your question...")
+for message in st.session_state.messages:
+    with st.chat_message(message["role"]):
+        st.markdown(message["content"])
 
-if st.button('Submit Question'):
+if len(st.session_state.messages) >= st.session_state.max_messages:
+    st.info(
+        """Notice: The maximum message limit for this demo version has been reached. We value your interest!
+        We encourage you to experience further interactions by building your own application with instructions
+        from Streamlit's [Build a basic LLM chat app](https://docs.streamlit.io/develop/tutorials/llms/build-conversational-apps)
+        tutorial. Thank you for your understanding."""
+    )
+else:
+    user_question = st.chat_input("What is up?")
     if user_question:
-        with st.spinner('Waiting for the assistant to respond...'):
-            result, st.session_state['thread_id'] = run_assistant(user_question, st.session_state['thread_id'])
-            if isinstance(result, str):
-                st.error(result)
-            else:
-                for message in result.data:
-                    if message.role == "assistant":
-                        # Display each assistant message in Markdown format
-                        st.markdown(f"**Assistant**: {message.content[0].text.value}")
-    else:
-        st.error("Please enter a question to submit.")
+        st.session_state.messages.append({"role": "user", "content": user_question})
+        with st.chat_message("user"):
+            st.markdown(user_question)
+        with st.chat_message("assistant"):
+            with st.spinner('Waiting for the assistant to respond...'):
+                result, st.session_state['thread_id'] = run_assistant(user_question, st.session_state['thread_id'])
+                if isinstance(result, str):
+                    st.error(result)
+                else:
+                    for message in result.data:
+                        if message.role == "assistant":
+                            response = message.content[0].text.value
+                            st.markdown(response)
+                            st.session_state.messages.append({"role": "assistant", "content": response})
