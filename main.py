@@ -21,7 +21,7 @@ def run_assistant(question):
     run = client.beta.threads.runs.create_and_poll(
         thread_id=thread.id,
         assistant_id="asst_s0ZnaVjEm8CnagISufIAQ1in",
-        instructions="The user works for a life insurance company. You will be fed a file with some information on a client, and need to identify if there is any extraordinary risk that the underwriter should take note of. The files will most likely be PDFs. You should keep communication to a minimum, as you will only be fed a file, and no message, and should only reply with the risk assessment. "
+        instructions="The user works for a life insurance company. You will be fed a file with some information on a client, and need to identify if there is any extraordinary risk that the underwriter should take note of. The files will most likely be PDFs. You should keep communication to a minimum, as you will only be fed a file, and no message, and should only reply with the risk assessment. Always reply in markdown. "
     )
 
     # Check if the run is completed and retrieve messages
