@@ -40,8 +40,12 @@ def run_assistant(question, thread_id=None):
 
 # Function to display conversation history
 def display_conversation_history():
-    for speaker, message in reversed(st.session_state['conversation']):
+    for i in range(len(st.session_state['conversation']) - 1, -1, -2):
+        speaker, message = st.session_state['conversation'][i]
         st.markdown(f"**{speaker}**: {message}")
+        if i > 0:
+            speaker, message = st.session_state['conversation'][i-1]
+            st.markdown(f"**{speaker}**: {message}")
 
 # Streamlit UI setup
 st.title('OpenAI Assistant Interaction')
@@ -75,11 +79,11 @@ if st.button('Submit Question'):
                         break
                         
                 if assistant_response:
-                    # Append assistant response to conversation history
-                    st.session_state['conversation'].append(("Assistant", assistant_response))
+                    # Insert assistant response at the correct position in conversation history
+                    st.session_state['conversation'].insert(-1, ("Assistant", assistant_response))
                     
-                    # Clear the previous output
-                    st.experimental_rerun()
+                    # Display updated conversation history
+                    display_conversation_history()
     else:
         st.error("Please enter a question to submit.")
         
