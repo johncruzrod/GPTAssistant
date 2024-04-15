@@ -23,6 +23,7 @@ class EventHandler(AssistantEventHandler):
     @override
     def on_text_delta(self, delta, snapshot):
         self.report[-1] += delta.value
+        response_placeholder.markdown(''.join(self.report))  # Update the response placeholder
 
     def on_tool_call_created(self, tool_call):
         self.report.append(f"\n\nAssistant used tool: {tool_call.type}\n")
@@ -63,13 +64,7 @@ if st.button("Send"):
         assistant_id=assistant_id,
         event_handler=event_handler,
     ) as stream:
-        while True:
-            try:
-                stream.block_until_done()  # Changed this line
-                response_placeholder.markdown(''.join(event_handler.report))
-                break  # Exit the loop when stream is done
-            except TimeoutError:
-                break
+        stream.until_done()  # Wait for the stream to complete
 
     st.session_state["input"] = ""  # Clear the input field
     uploaded_file = None  # Reset the uploaded file
