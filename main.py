@@ -65,8 +65,9 @@ if st.button("Send"):
     ) as stream:
         while True:
             try:
-                stream.block_for_event()
+                stream.block_until_done()  # Changed this line
                 response_placeholder.markdown(''.join(event_handler.report))
+                break  # Exit the loop when stream is done
             except TimeoutError:
                 break
 
