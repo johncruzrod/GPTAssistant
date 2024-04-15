@@ -44,14 +44,14 @@ if "messages" not in st.session_state:
 
 # Display chat messages from history
 for message in reversed(st.session_state.messages):
-    author = "user" if message.role == "user" else "assistant"
-    st.chat_message(message.content, author)
+    author = "user" if message["role"] == "user" else "assistant"
+    st.chat_message(message["content"], author)
 
 # Accept user input
 user_question = st.chat_input("Enter your question:")
 if user_question:
     # Append user question to conversation history
-    st.session_state.messages.append(openai.openai_object.OpenAIObject(role="user", content=user_question))
+    st.session_state.messages.append({"role": "user", "content": user_question})
     
     # Run the assistant and get the response
     with st.spinner('Waiting for the assistant to respond...'):
@@ -63,11 +63,11 @@ if user_question:
             # Process assistant messages and display
             assistant_response = None
             for message in result:
-                if message.role == "assistant":
-                    assistant_response = message.content
+                if message["role"] == "assistant":
+                    assistant_response = message["content"]
                     break
             
             if assistant_response:
                 # Append assistant response to conversation history
-                st.session_state.messages.append(openai.openai_object.OpenAIObject(role="assistant", content=assistant_response))
+                st.session_state.messages.append({"role": "assistant", "content": assistant_response})
                 st.chat_message(assistant_response, "assistant")
