@@ -8,41 +8,45 @@ from openai import AssistantEventHandler
 openai.api_key = st.secrets["OPENAI_API_KEY"]
 client = openai.OpenAI()
 
-class EventHandler(AssistantEventHandler):    
+class EventHandler(AssistantEventHandler):
+    def __init__(self):
+        self.response = ""
+        
     @override
     def on_text_created(self, text) -> None:
-        st.write(f"\nassistant > ", end="", flush=True)
+        self.response += f"\nassistant > "
         
     @override
     def on_text_delta(self, delta, snapshot):
-        st.write(delta.value, end="", flush=True)
+        self.response += delta.value
         
     def on_tool_call_created(self, tool_call):
-        st.write(f"\nassistant > {tool_call.type}\n", flush=True)
+        self.response += f"\nassistant > {tool_call.type}\n"
     
     def on_tool_call_delta(self, delta, snapshot):
         if delta.type == 'code_interpreter':
             if delta.code_interpreter.input:
-                st.write(delta.code_interpreter.input, end="", flush=True)
+                self.response += delta.code_interpreter.input
             if delta.code_interpreter.outputs:
-                st.write(f"\n\noutput >", flush=True)
+                self.response += f"\n\noutput >"
                 for output in delta.code_interpreter.outputs:
                     if output.type == "logs":
-                        st.write(f"\n{output.logs}", flush=True)
+                        self.response += f"\n{output.logs}"
 
 def run_assistant(question, thread_id):
+    event_handler = EventHandler()
     with client.beta.threads.runs.stream(
         thread_id=thread_id,
         assistant_id="asst_s0ZnaVjEm8CnagISufIAQ1in",
         instructions=question,
-        event_handler=EventHandler(),
+        event_handler=event_handler,
     ) as stream:
         stream.until_done()
     
     messages = client.beta.threads.messages.list(
         thread_id=thread_id
     )
-    return messages, thread_id
+    return messages, thread_id, event_handler.response
 
 # Streamlit UI setup
 st.title('OpenAI Assistant Interaction')
