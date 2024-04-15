@@ -11,7 +11,11 @@ assistant_id = "asst_s0ZnaVjEm8CnagISufIAQ1in"
 class EventHandler(AssistantEventHandler):
     def __init__(self):
         self.report = []
+        self.__stream = None  # Add this line
         
+    def _init(self, stream):
+        self.__stream = stream
+
     @override
     def on_text_created(self, text) -> None:
         self.report.append(f"\n\nAssistant: ")
@@ -40,9 +44,15 @@ if 'thread_id' not in st.session_state:
     st.session_state['thread_id'] = thread.id
 
 user_input = st.text_input("Enter your message:", key="input")
+uploaded_file = st.file_uploader("Choose a file to attach (optional)")
 
 if st.button("Send"):
-    client.beta.threads.messages.create(thread_id=st.session_state['thread_id'], role="user", content=user_input)
+    if uploaded_file is not None:
+        file_name = uploaded_file.name
+        file_content = uploaded_file.read().decode("utf-8")
+        client.beta.threads.messages.create(thread_id=st.session_state['thread_id'], role="user", content=user_input, files=[{"name": file_name, "content": file_content}])
+    else:
+        client.beta.threads.messages.create(thread_id=st.session_state['thread_id'], role="user", content=user_input)
     
     event_handler = EventHandler()
     
@@ -61,3 +71,4 @@ if st.button("Send"):
                 break
 
     st.session_state["input"] = ""  # Clear the input field
+    uploaded_file = None  # Reset the uploaded file
