@@ -35,52 +35,46 @@ def run_assistant(question, thread_id=None):
     else:
         return f"Run status: {run.status}", thread_id
 
-# Function to display conversation history
-def display_conversation_history():
-    # Use reversed order to show the most recent messages at the top
-    for i in reversed(range(len(st.session_state['conversation']))):
-        speaker, message = st.session_state['conversation'][i]
-        st.markdown(f"**{speaker}**: {message}")
-
 # Streamlit UI setup
 st.title('OpenAI Assistant Interaction')
 
-if 'thread_id' not in st.session_state:
-    st.session_state['thread_id'] = None
+# Initialize chat history if not already initialized
+if "messages" not in st.session_state:
+    st.session_state.messages = []
 
-if 'conversation' not in st.session_state:
-    st.session_state['conversation'] = []
+# Display chat messages from history
+for message in reversed(st.session_state.messages):
+    st.chat_message(message["role"], message["content"])
 
-user_question = st.text_input("Enter your question here:", key="user_question", placeholder="Type your question...")
+# Accept user input
+user_question = st.chat_input("Enter your question:", key="user_question")
 
-if st.button('Submit Question'):
-    if user_question:
-        # Append user question to conversation history
-        st.session_state['conversation'].append(("User", user_question))
+if user_question:
+    # Append user question to conversation history
+    st.session_state.messages.append({"role": "user", "content": user_question})
+    
+    # Display user message in chat
+    st.chat_message("user", user_question)
+    
+    # Clear the input field
+    st.session_state.user_question = ""
+    
+    # Run the assistant and get the response
+    with st.spinner('Waiting for the assistant to respond...'):
+        result, st.session_state['thread_id'] = run_assistant(user_question, st.session_state.get('thread_id'))
         
-        # No need to call display_conversation_history here
-        
-        with st.spinner('Waiting for the assistant to respond...'):
-            result, st.session_state['thread_id'] = run_assistant(user_question, st.session_state['thread_id'])
+        if isinstance(result, str):
+            st.error(result)
+        else:
+            assistant_response = None
+            for message in result.data:
+                if message.role == "assistant":
+                    assistant_response = message.content[0].text.value
+                    break
             
-            if isinstance(result, str):
-                st.error(result)
-            else:
-                assistant_response = None
-                for message in result.data:
-                    if message.role == "assistant":
-                        assistant_response = message.content
-                        break
-                        
-                if assistant_response:
-                    # Append assistant response to conversation history
-                    st.session_state['conversation'].append(("Assistant", assistant_response))
-
-        # Display updated conversation history
-        display_conversation_history()
-    else:
-        st.error("Please enter a question to submit.")
-
-# Always display conversation history, even if no question has been asked yet
-if st.session_state['conversation']:
-    display_conversation_history()
+            if assistant_response:
+                # Append assistant response to conversation history
+                st.session_state.messages.append({"role": "assistant", "content": assistant_response})
+                
+                # Display assistant response in chat
+                st.chat_message("assistant", assistant_response)
