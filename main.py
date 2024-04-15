@@ -6,34 +6,33 @@ import streamlit as st
 openai.api_key = st.secrets["OPENAI_API_KEY"]
 client = openai.OpenAI()
 
-# Function to run assistant within an existing thread or create a new one
+# Function to run assistant within an existing thread or create a new one with file support
 def run_assistant(question, file=None, thread_id=None):
-    if thread_id is None:
-        # Create a new thread if one does not exist
-        thread = client.beta.threads.create()
-        thread_id = thread.id
-    else:
-        # Use the existing thread to maintain conversation context
-        thread_id = thread_id
-
     if file is not None:
         # Upload the file to OpenAI
         file_obj = client.beta.files.create(file=file.read(), purpose="user_message")
         file_id = file_obj.id
+        file_info = {"id": file_id, "name": file.name}
+    else:
+        file_info = None
 
-        # Add user's question and file reference to the thread
+    if thread_id is None:
+        # Create a new thread if one does not exist and include file if provided
+        messages = [{
+            "role": "user",
+            "content": question,
+            "file_ids": [file_info['id']] if file_info else []
+        }]
+        thread = client.beta.threads.create(messages=messages)
+        thread_id = thread.id
+    else:
+        # Use the existing thread to maintain conversation context
+        # and add a new message with or without a file
         client.beta.threads.messages.create(
             thread_id=thread_id,
             role="user",
             content=question,
-            files=[{"id": file_id, "name": file.name}]
-        )
-    else:
-        # Add user's question to the thread
-        client.beta.threads.messages.create(
-            thread_id=thread_id,
-            role="user",
-            content=question
+            file_ids=[file_info['id']] if file_info else []
         )
 
     # Create and poll a run
