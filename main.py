@@ -40,19 +40,20 @@ def run_assistant(question, thread_id=None):
 
 # Function to display conversation history
 def display_conversation_history():
-    for i in range(len(st.session_state['conversation']) - 1, -1, -2):
-        speaker, message = st.session_state['conversation'][i]
-        st.markdown(f"**{speaker}**: {message}")
-        if i > 0:
-            speaker, message = st.session_state['conversation'][i-1]
-            st.markdown(f"**{speaker}**: {message}")
+    # Display from the start to maintain chronological order
+    for i in range(0, len(st.session_state['conversation']), 2):
+        user_speaker, user_message = st.session_state['conversation'][i]
+        st.markdown(f"**{user_speaker}**: {user_message}")
+        if i + 1 < len(st.session_state['conversation']):
+            assistant_speaker, assistant_message = st.session_state['conversation'][i+1]
+            st.markdown(f"**{assistant_speaker}**: {assistant_message}")
 
 # Streamlit UI setup
 st.title('OpenAI Assistant Interaction')
 
 if 'thread_id' not in st.session_state:
     st.session_state['thread_id'] = None
-    
+
 if 'conversation' not in st.session_state:
     st.session_state['conversation'] = []
 
@@ -62,9 +63,6 @@ if st.button('Submit Question'):
     if user_question:
         # Append user question to conversation history
         st.session_state['conversation'].append(("User", user_question))
-        
-        # Display conversation history
-        display_conversation_history()
         
         with st.spinner('Waiting for the assistant to respond...'):
             result, st.session_state['thread_id'] = run_assistant(user_question, st.session_state['thread_id'])
@@ -79,11 +77,11 @@ if st.button('Submit Question'):
                         break
                         
                 if assistant_response:
-                    # Insert assistant response at the correct position in conversation history
-                    st.session_state['conversation'].insert(-1, ("Assistant", assistant_response))
+                    # Append assistant response to conversation history
+                    st.session_state['conversation'].append(("Assistant", assistant_response))
                     
-                    # Display updated conversation history
-                    display_conversation_history()
+        # Display updated conversation history
+        display_conversation_history()
     else:
         st.error("Please enter a question to submit.")
         
