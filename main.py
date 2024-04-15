@@ -7,7 +7,7 @@ openai.api_key = st.secrets["OPENAI_API_KEY"]
 client = openai.OpenAI()
 
 # Function to run assistant within an existing thread or create a new one
-def run_assistant(question, thread_id=None):
+def run_assistant(question, file=None, thread_id=None):
     if thread_id is None:
         # Create a new thread if one does not exist
         thread = client.beta.threads.create()
@@ -16,12 +16,25 @@ def run_assistant(question, thread_id=None):
         # Use the existing thread to maintain conversation context
         thread_id = thread_id
 
-    # Add user's question to the thread
-    client.beta.threads.messages.create(
-        thread_id=thread_id,
-        role="user",
-        content=question
-    )
+    if file is not None:
+        # Upload the file to OpenAI
+        file_obj = client.beta.files.create(file=file, purpose="fine-tune")
+        file_id = file_obj.id
+
+        # Add user's question and file reference to the thread
+        client.beta.threads.messages.create(
+            thread_id=thread_id,
+            role="user",
+            content=question,
+            file_ids=[file_id]
+        )
+    else:
+        # Add user's question to the thread
+        client.beta.threads.messages.create(
+            thread_id=thread_id,
+            role="user",
+            content=question
+        )
 
     # Create and poll a run
     run = client.beta.threads.runs.create_and_poll(
@@ -41,34 +54,29 @@ def run_assistant(question, thread_id=None):
 # Streamlit UI setup
 st.title('OpenAI Assistant Interaction')
 
-with st.expander("ℹ️ Disclaimer"):
-    st.caption("""We appreciate your engagement! Please note, this demo is designed to process a maximum of 10 interactions and may be unavailable if too many people use the service concurrently. Thank you for your understanding.""")
-
 if 'thread_id' not in st.session_state:
     st.session_state['thread_id'] = None
 
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-if "max_messages" not in st.session_state:
-    # Counting both user and assistant messages, so 10 rounds of conversation
-    st.session_state.max_messages = 20
-
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
 
-if len(st.session_state.messages) >= st.session_state.max_messages:
-    st.info("""Notice: The maximum message limit for this demo version has been reached. We value your interest! We encourage you to experience further interactions by building your own application with instructions from Streamlit's [Build a basic LLM chat app](https://docs.streamlit.io/develop/tutorials/llms/build-conversational-apps) tutorial. Thank you for your understanding.""")
-else:
-    user_question = st.chat_input("What is up?")
-    if user_question:
-        st.session_state.messages.append({"role": "user", "content": user_question})
-        with st.chat_message("user"):
-            st.markdown(user_question)
-        with st.chat_message("assistant"):
-            with st.spinner('Waiting for the assistant to respond...'):
-                result, st.session_state['thread_id'] = run_assistant(user_question, st.session_state['thread_id'])
+user_question = st.chat_input("What is up?")
+uploaded_file = st.file_uploader("Upload a file (optional)")
+
+if user_question:
+    st.session_state.messages.append({"role": "user", "content": user_question})
+    with st.chat_message("user"):
+        st.markdown(user_question)
+        if uploaded_file is not None:
+            st.write("Uploaded file:", uploaded_file.name)
+
+    with st.chat_message("assistant"):
+        with st.spinner('Waiting for the assistant to respond...'):
+            result, st.session_state['thread_id'] = run_assistant(user_question, uploaded_file, st.session_state['thread_id'])
             if isinstance(result, str):
                 st.error(result)
             else:
