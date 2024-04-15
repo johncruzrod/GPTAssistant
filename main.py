@@ -8,7 +8,7 @@ openai.api_key = st.secrets["OPENAI_API_KEY"]
 # Function to interact with the OpenAI Assistant
 def ask_assistant(question):
     # Create a new thread for the conversation
-    thread = openai.Thread.create()
+    thread = client.beta.threads.create()
     
     # Add user's question to the thread
     message = openai.Message.create(
