@@ -57,8 +57,8 @@ if st.button('Submit Question'):
             if isinstance(result, str):
                 st.error(result)
             else:
-                # Append user question to conversation history at the beginning
-                st.session_state['conversation'].insert(0, ("User", user_question))
+                # Append user question to conversation history
+                st.session_state['conversation'].append(("User", user_question))
                 
                 assistant_response = None
                 for message in result.data:
@@ -67,11 +67,15 @@ if st.button('Submit Question'):
                         break
                         
                 if assistant_response:
-                    # Append assistant response to conversation history at the beginning
-                    st.session_state['conversation'].insert(0, ("Assistant", assistant_response))
+                    # Append assistant response to conversation history
+                    st.session_state['conversation'].append(("Assistant", assistant_response))
                     
-                # Display conversation history in reverse order
-                for speaker, message in reversed(st.session_state['conversation']):
+                # Display conversation history in desired order
+                for i in range(len(st.session_state['conversation']) - 1, -1, -2):
+                    speaker, message = st.session_state['conversation'][i]
                     st.markdown(f"**{speaker}**: {message}")
+                    if i > 0:
+                        speaker, message = st.session_state['conversation'][i-1]
+                        st.markdown(f"**{speaker}**: {message}")
     else:
         st.error("Please enter a question to submit.")
