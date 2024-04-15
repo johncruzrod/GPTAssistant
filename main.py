@@ -80,6 +80,9 @@ else:
                     # Extract the assistant's response from the latest message
                     latest_message = result.data[-1]
                     if latest_message.role == "assistant":
-                        response = latest_message.content[0].text.value.split("\n")[-1]
-                        st.markdown(response)
-                        st.session_state.messages.append({"role": "assistant", "content": response})
+                        response = latest_message.content[0].text.value
+                        # Extract the last paragraph of the response
+                        paragraphs = response.split("\n\n")
+                        last_paragraph = paragraphs[-1]
+                        st.markdown(last_paragraph)
+                        st.session_state.messages.append({"role": "assistant", "content": last_paragraph})
