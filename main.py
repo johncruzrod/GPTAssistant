@@ -77,10 +77,9 @@ else:
                 if isinstance(result, str):
                     st.error(result)
                 else:
-                    for message in result.data:
-                        if message.role == "assistant":
-                            response = message.content[0].text.value
-                            st.markdown(response)
-                            # Append the assistant's response only once
-                            if {"role": "assistant", "content": response} not in st.session_state.messages:
-                                st.session_state.messages.append({"role": "assistant", "content": response})
+                    # Extract the assistant's response from the latest message
+                    latest_message = result.data[-1]
+                    if latest_message.role == "assistant":
+                        response = latest_message.content[0].text.value.split("\n")[-1]
+                        st.markdown(response)
+                        st.session_state.messages.append({"role": "assistant", "content": response})
