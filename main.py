@@ -44,7 +44,10 @@ if "messages" not in st.session_state:
 
 # Display chat messages from history
 for message in reversed(st.session_state.messages):
-    st.chat_message(message["role"], message["content"])
+    if message["role"] == "user":
+        st.chat_message(message["content"], key=f"user_{message['content']}")
+    else:
+        st.chat_message(message["content"], key=f"assistant_{message['content']}")
 
 # Accept user input
 user_question = st.chat_input("Enter your question:", key="user_question")
@@ -54,7 +57,7 @@ if user_question:
     st.session_state.messages.append({"role": "user", "content": user_question})
     
     # Display user message in chat
-    st.chat_message("user", user_question)
+    st.chat_message(user_question, key=f"user_{user_question}")
     
     # Clear the input field
     st.session_state.user_question = ""
@@ -77,4 +80,4 @@ if user_question:
                 st.session_state.messages.append({"role": "assistant", "content": assistant_response})
                 
                 # Display assistant response in chat
-                st.chat_message("assistant", assistant_response)
+                st.chat_message(assistant_response, key=f"assistant_{assistant_response}")
