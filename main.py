@@ -1,4 +1,3 @@
-import os
 import openai
 import streamlit as st
 
@@ -31,9 +30,9 @@ def run_assistant(question, thread_id=None):
         messages = client.beta.threads.messages.list(
             thread_id=thread_id
         )
-        return messages, thread_id
+        return messages.data, thread_id
     else:
-        return f"Run status: {run.status}", thread_id
+        return None, thread_id
 
 # Streamlit UI setup
 st.title('OpenAI Assistant Interaction')
@@ -41,13 +40,12 @@ st.title('OpenAI Assistant Interaction')
 # Initialize chat history if not already initialized
 if "messages" not in st.session_state:
     st.session_state.messages = []
+    st.session_state['thread_id'] = None
 
 # Display chat messages from history
 for message in reversed(st.session_state.messages):
-    if message["role"] == "user":
-        st.chat_message(message["content"])
-    else:
-        st.chat_message(message["content"])
+    author = "user" if message["role"] == "user" else "assistant"
+    st.chat_message(message["content"], author)
 
 # Accept user input
 user_question = st.chat_input("Enter your question:")
@@ -56,28 +54,22 @@ if user_question:
     # Append user question to conversation history
     st.session_state.messages.append({"role": "user", "content": user_question})
     
-    # Display user message in chat
-    st.chat_message(user_question)
-    
-    # Clear the input field
-    st.session_state.user_question = ""
-    
     # Run the assistant and get the response
     with st.spinner('Waiting for the assistant to respond...'):
-        result, st.session_state['thread_id'] = run_assistant(user_question, st.session_state.get('thread_id'))
-        
-        if isinstance(result, str):
-            st.error(result)
+        result, thread_id = run_assistant(user_question, st.session_state.get('thread_id'))
+        st.session_state['thread_id'] = thread_id
+
+        if result is None:
+            st.error(f"No response from the assistant, try again.")
         else:
+            # Process assistant messages and display
             assistant_response = None
-            for message in result.data:
-                if message.role == "assistant":
-                    assistant_response = message.content[0].text.value
+            for message in result:
+                if message['role'] == "assistant":
+                    assistant_response = message['content']
                     break
             
             if assistant_response:
                 # Append assistant response to conversation history
                 st.session_state.messages.append({"role": "assistant", "content": assistant_response})
-                
-                # Display assistant response in chat
-                st.chat_message(assistant_response)
+                st.chat_message(assistant_response, "assistant")
