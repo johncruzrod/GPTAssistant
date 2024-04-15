@@ -51,15 +51,23 @@ user_question = st.text_input("Enter your question here:", placeholder="Type you
 
 if st.button('Submit Question'):
     if user_question:
+        # Append user question to conversation history
+        st.session_state['conversation'].append(("User", user_question))
+        
+        # Display conversation history
+        for i in range(len(st.session_state['conversation']) - 1, -1, -2):
+            speaker, message = st.session_state['conversation'][i]
+            st.markdown(f"**{speaker}**: {message}")
+            if i > 0:
+                speaker, message = st.session_state['conversation'][i-1]
+                st.markdown(f"**{speaker}**: {message}")
+        
         with st.spinner('Waiting for the assistant to respond...'):
             result, st.session_state['thread_id'] = run_assistant(user_question, st.session_state['thread_id'])
             
             if isinstance(result, str):
                 st.error(result)
             else:
-                # Append user question to conversation history
-                st.session_state['conversation'].append(("User", user_question))
-                
                 assistant_response = None
                 for message in result.data:
                     if message.role == "assistant":
@@ -70,12 +78,15 @@ if st.button('Submit Question'):
                     # Append assistant response to conversation history
                     st.session_state['conversation'].append(("Assistant", assistant_response))
                     
-                # Display conversation history in desired order
-                for i in range(len(st.session_state['conversation']) - 1, -1, -2):
-                    speaker, message = st.session_state['conversation'][i]
-                    st.markdown(f"**{speaker}**: {message}")
-                    if i > 0:
-                        speaker, message = st.session_state['conversation'][i-1]
-                        st.markdown(f"**{speaker}**: {message}")
+                    # Display the latest assistant response
+                    st.markdown(f"**Assistant**: {assistant_response}")
     else:
         st.error("Please enter a question to submit.")
+        
+        # Display conversation history
+        for i in range(len(st.session_state['conversation']) - 1, -1, -2):
+            speaker, message = st.session_state['conversation'][i]
+            st.markdown(f"**{speaker}**: {message}")
+            if i > 0:
+                speaker, message = st.session_state['conversation'][i-1]
+                st.markdown(f"**{speaker}**: {message}")
