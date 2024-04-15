@@ -40,18 +40,16 @@ def run_assistant(question, thread_id=None):
 
 # Streamlit UI setup
 st.title('OpenAI Assistant Interaction')
+
 with st.expander("ℹ️ Disclaimer"):
-    st.caption(
-        """We appreciate your engagement! Please note, this demo is designed to
-        process a maximum of 10 interactions and may be unavailable if too many
-        people use the service concurrently. Thank you for your understanding.
-        """
-    )
+    st.caption("""We appreciate your engagement! Please note, this demo is designed to process a maximum of 10 interactions and may be unavailable if too many people use the service concurrently. Thank you for your understanding.""")
 
 if 'thread_id' not in st.session_state:
     st.session_state['thread_id'] = None
+
 if "messages" not in st.session_state:
     st.session_state.messages = []
+
 if "max_messages" not in st.session_state:
     # Counting both user and assistant messages, so 10 rounds of conversation
     st.session_state.max_messages = 20
@@ -61,12 +59,7 @@ for message in st.session_state.messages:
         st.markdown(message["content"])
 
 if len(st.session_state.messages) >= st.session_state.max_messages:
-    st.info(
-        """Notice: The maximum message limit for this demo version has been reached. We value your interest!
-        We encourage you to experience further interactions by building your own application with instructions
-        from Streamlit's [Build a basic LLM chat app](https://docs.streamlit.io/develop/tutorials/llms/build-conversational-apps)
-        tutorial. Thank you for your understanding."""
-    )
+    st.info("""Notice: The maximum message limit for this demo version has been reached. We value your interest! We encourage you to experience further interactions by building your own application with instructions from Streamlit's [Build a basic LLM chat app](https://docs.streamlit.io/develop/tutorials/llms/build-conversational-apps) tutorial. Thank you for your understanding.""")
 else:
     user_question = st.chat_input("What is up?")
     if user_question:
@@ -76,13 +69,13 @@ else:
         with st.chat_message("assistant"):
             with st.spinner('Waiting for the assistant to respond...'):
                 result, st.session_state['thread_id'] = run_assistant(user_question, st.session_state['thread_id'])
-                if isinstance(result, str):
-                    st.error(result)
-                else:
-                    for message in result.data:
-                        if message.role == "assistant":
-                            response = message.content[0].text.value
-                            st.markdown(response)
-                            # Append only the assistant's response to the messages list
-                            st.session_state.messages.append({"role": "assistant", "content": response})
-                            break
+            if isinstance(result, str):
+                st.error(result)
+            else:
+                for message in result.data:
+                    if message.role == "assistant":
+                        response = message.content[0].text.value
+                        st.markdown(response)
+                        # Append only the assistant's response to the messages list
+                        st.session_state.messages.append({"role": "assistant", "content": response})
+                        break
