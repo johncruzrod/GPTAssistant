@@ -68,28 +68,23 @@ if len(st.session_state.messages) >= st.session_state.max_messages:
 else:
     user_question = st.chat_input("What is up?")
     if user_question:
-        # Append user's query to session messages
         st.session_state.messages.append({"role": "user", "content": user_question})
-    
         with st.chat_message("user"):
             st.markdown(user_question)
-    
+        
+        # Clear the chat input
+        st.session_state.user_question = ""
+        
         with st.chat_message("assistant"):
             with st.spinner('Waiting for the assistant to respond...'):
-                # Obtain the response and thread id from the assistant
                 result, st.session_state['thread_id'] = run_assistant(user_question, st.session_state['thread_id'])
-    
                 if isinstance(result, str):
                     st.error(result)
                 else:
-                    for message in result[0].data:  # Assuming result returns messages and thread_id in a tuple
-                        if message['role'] == "assistant":
-                            response = message["content"]
+                    for message in result.data:
+                        if message.role == "assistant":
+                            response = message.content[0].text.value
                             st.markdown(response)
-    
                             # Append only the assistant's response to the messages list
                             st.session_state.messages.append({"role": "assistant", "content": response})
                             break
-
-# Force a state refresh after updating messages
-st.experimental_rerun()
