@@ -1,90 +1,80 @@
 import os
 import openai
 import streamlit as st
+from typing_extensions import override
+from openai import AssistantEventHandler
 
 # Initialize OpenAI client
 openai.api_key = st.secrets["OPENAI_API_KEY"]
 client = openai.OpenAI()
 
-# Function to run assistant within an existing thread or create a new one
-def run_assistant(question, thread_id=None):
-    if thread_id is None:
-        # Create a new thread if one does not exist
-        thread = client.beta.threads.create()
-        thread_id = thread.id
-    else:
-        # Use the existing thread to maintain conversation context
-        thread_id = thread_id
-    # Add user's question to the thread
-    client.beta.threads.messages.create(
+class EventHandler(AssistantEventHandler):    
+    @override
+    def on_text_created(self, text) -> None:
+        st.write(f"\nassistant > ", end="", flush=True)
+        
+    @override
+    def on_text_delta(self, delta, snapshot):
+        st.write(delta.value, end="", flush=True)
+        
+    def on_tool_call_created(self, tool_call):
+        st.write(f"\nassistant > {tool_call.type}\n", flush=True)
+    
+    def on_tool_call_delta(self, delta, snapshot):
+        if delta.type == 'code_interpreter':
+            if delta.code_interpreter.input:
+                st.write(delta.code_interpreter.input, end="", flush=True)
+            if delta.code_interpreter.outputs:
+                st.write(f"\n\noutput >", flush=True)
+                for output in delta.code_interpreter.outputs:
+                    if output.type == "logs":
+                        st.write(f"\n{output.logs}", flush=True)
+
+def run_assistant(question, thread_id):
+    with client.beta.threads.runs.stream(
         thread_id=thread_id,
-        role="user",
-        content=question
+        assistant_id="asst_s0ZnaVjEm8CnagISufIAQ1in",
+        instructions=question,
+        event_handler=EventHandler(),
+    ) as stream:
+        stream.until_done()
+    
+    messages = client.beta.threads.messages.list(
+        thread_id=thread_id
     )
-    # Create and poll a run
-    run = client.beta.threads.runs.create_and_poll(
-        thread_id=thread_id,
-        assistant_id="asst_s0ZnaVjEm8CnagISufIAQ1in"
-    )
-    # Retrieve messages only if the run is completed
-    if run.status == 'completed':
-        messages = client.beta.threads.messages.list(
-            thread_id=thread_id
-        )
-        return messages, thread_id
-    else:
-        return f"Run status: {run.status}", thread_id
+    return messages, thread_id
 
 # Streamlit UI setup
 st.title('OpenAI Assistant Interaction')
 
-with st.expander("ℹ️ Disclaimer"):
-    st.caption(
-        """We appreciate your engagement! Please note, this demo is designed to
-        process a maximum of 10 interactions and may be unavailable if too many
-        people use the service concurrently. Thank you for your understanding.
-        """
-    )
-
 if 'thread_id' not in st.session_state:
     st.session_state['thread_id'] = None
+
 if "messages" not in st.session_state:
     st.session_state.messages = []
-if "max_messages" not in st.session_state:
-    # Counting both user and assistant messages, so 10 rounds of conversation
-    st.session_state.max_messages = 20
 
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
 
-if len(st.session_state.messages) >= st.session_state.max_messages:
-    st.info(
-        """Notice: The maximum message limit for this demo version has been reached. We value your interest!
-        We encourage you to experience further interactions by building your own application with instructions
-        from Streamlit's [Build a basic LLM chat app](https://docs.streamlit.io/develop/tutorials/llms/build-conversational-apps)
-        tutorial. Thank you for your understanding."""
-    )
-else:
-    user_question = st.chat_input("What is up?")
-    if user_question:
-        st.session_state.messages.append({"role": "user", "content": user_question})
-        with st.chat_message("user"):
-            st.markdown(user_question)
-        
-        # Clear the chat input
-        st.session_state.user_question = ""
-        
-        with st.chat_message("assistant"):
-            with st.spinner('Waiting for the assistant to respond...'):
-                result, st.session_state['thread_id'] = run_assistant(user_question, st.session_state['thread_id'])
-                if isinstance(result, str):
-                    st.error(result)
-                else:
-                    for message in result.data:
-                        if message.role == "assistant":
-                            response = message.content[0].text.value
-                            st.markdown(response)
-                            # Append only the assistant's response to the messages list
-                            st.session_state.messages.append({"role": "assistant", "content": response})
-                            break
+if prompt := st.chat_input("What is up?"):
+    st.session_state.messages.append({"role": "user", "content": prompt})
+    with st.chat_message("user"):
+        st.markdown(prompt)
+
+    with st.chat_message("assistant"):
+        try:
+            result, st.session_state['thread_id'] = run_assistant(prompt, st.session_state['thread_id'])
+            response = result.data[-1].content[0].text.value
+            st.session_state.messages.append(
+                {"role": "assistant", "content": response}
+            )
+        except:
+            rate_limit_message = """
+            Oops! Sorry, I can't talk now. Too many people have used
+            this service recently.
+            """
+            st.session_state.messages.append(
+                {"role": "assistant", "content": rate_limit_message}
+            )
+            st.rerun()
