@@ -1,7 +1,7 @@
 import openai
 import streamlit as st
 
-# Initialize OpenAI client
+# Initialize OpenAI client with API key from Streamlit secrets
 openai.api_key = st.secrets["OPENAI_API_KEY"]
 
 # Function to run assistant within an existing thread or create a new one
@@ -18,7 +18,7 @@ def run_assistant(question, thread_id=None):
         )
         thread_id = thread.id
     else:
-        # Use the existing thread to maintain conversation context
+        # Add user's question to the thread
         openai.Message.create(
             thread_id=thread_id,
             role="user",
@@ -28,7 +28,7 @@ def run_assistant(question, thread_id=None):
     # Create and poll a run
     run = openai.Run.create_and_poll(
         thread_id=thread_id,
-        assistant_id="asst_s0ZnaVjEm8CnagISufIAQ1in"
+        assistant_id="asst_UEVqifz1E5lF4nddLXVbpbza"
     )
 
     # Retrieve messages only if the run is completed
@@ -68,7 +68,7 @@ if user_question:
             else:
                 for message in result.data:
                     if message.role == "assistant":
-                        response = message.content[0].text.value
+                        response = message.content
                         st.markdown(response)
                         # Append only the assistant's response to the messages list
                         st.session_state.messages.append({"role": "assistant", "content": response})
