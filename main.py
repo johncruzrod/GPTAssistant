@@ -8,32 +8,25 @@ openai.api_key = st.secrets["OPENAI_API_KEY"]
 def run_assistant(question, thread_id=None):
     if thread_id is None:
         # Create a new thread if one does not exist
-        thread = openai.Thread.create(
-            messages=[
-                {
-                    "role": "user",
-                    "content": question
-                }
-            ]
-        )
+        thread = openai.beta.threads.create()
         thread_id = thread.id
-    else:
-        # Add user's question to the thread
-        openai.Message.create(
-            thread_id=thread_id,
-            role="user",
-            content=question
-        )
+    
+    # Add user's question to the thread
+    openai.beta.threads.messages.create(
+        thread_id=thread_id,
+        role="user",
+        content=question
+    )
 
     # Create and poll a run
-    run = openai.Run.create_and_poll(
+    run = openai.beta.threads.runs.create_and_poll(
         thread_id=thread_id,
         assistant_id="asst_UEVqifz1E5lF4nddLXVbpbza"
     )
 
     # Retrieve messages only if the run is completed
     if run.status == 'completed':
-        messages = openai.Message.list(
+        messages = openai.beta.threads.messages.list(
             thread_id=thread_id
         )
         return messages, thread_id
@@ -66,7 +59,7 @@ if user_question:
             if isinstance(result, str):
                 st.error(result)
             else:
-                for message in result.data:
+                for message in result:
                     if message.role == "assistant":
                         response = message.content
                         st.markdown(response)
