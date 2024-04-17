@@ -50,4 +50,19 @@ user_question = st.text_input("Hello! How can I assist you today?")
 
 if user_question:
     st.session_state.messages.append({"role": "user", "content": user_question})
-    with st.chat_message
+    with st.chat_message("user"):
+        st.markdown(user_question)
+
+    with st.chat_message("assistant"):
+        with st.spinner('Waiting for the assistant to respond...'):
+            result, st.session_state['thread_id'] = run_assistant(user_question, st.session_state['thread_id'])
+            if isinstance(result, str):
+                st.error(result)
+            else:
+                for message in result:
+                    if message.role == "assistant":
+                        response = message.content
+                        st.markdown(response)
+                        # Append only the assistant's response to the messages list
+                        st.session_state.messages.append({"role": "assistant", "content": response})
+                        break
