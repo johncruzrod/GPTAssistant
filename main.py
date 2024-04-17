@@ -5,54 +5,25 @@ import streamlit as st
 openai.api_key = st.secrets["OPENAI_API_KEY"]
 
 # Function to run assistant within an existing thread or create a new one
-def run_assistant(question, file=None, thread_id=None):
+def run_assistant(question, thread_id=None):
     if thread_id is None:
         # Create a new thread if one does not exist
-        if file:
-            # Upload the file to OpenAI
-            file_obj = openai.File.create(file=file.getvalue(), purpose="user_message")
-            file_id = file_obj.id
-            # Create thread with initial message and file
-            thread = openai.Thread.create(
-                messages=[
-                    {
-                        "role": "user",
-                        "content": question,
-                        "file_ids": [file_id]
-                    }
-                ]
-            )
-        else:
-            # Create thread without file
-            thread = openai.Thread.create(
-                messages=[
-                    {
-                        "role": "user",
-                        "content": question
-                    }
-                ]
-            )
+        thread = openai.Thread.create(
+            messages=[
+                {
+                    "role": "user",
+                    "content": question
+                }
+            ]
+        )
         thread_id = thread.id
     else:
         # Use the existing thread to maintain conversation context
-        if file:
-            # Upload the file to OpenAI
-            file_obj = openai.File.create(file=file.getvalue(), purpose="user_message")
-            file_id = file_obj.id
-            # Add user's question and file reference to the thread
-            openai.Message.create(
-                thread_id=thread_id,
-                role="user",
-                content=question,
-                file_ids=[file_id]
-            )
-        else:
-            # Add user's question to the thread
-            openai.Message.create(
-                thread_id=thread_id,
-                role="user",
-                content=question
-            )
+        openai.Message.create(
+            thread_id=thread_id,
+            role="user",
+            content=question
+        )
 
     # Create and poll a run
     run = openai.Run.create_and_poll(
@@ -70,7 +41,7 @@ def run_assistant(question, file=None, thread_id=None):
         return f"Run status: {run.status}", thread_id
 
 # Streamlit UI setup
-st.title('OpenAI Assistant Interaction')
+st.title('Chat with GPT-4')
 
 if 'thread_id' not in st.session_state:
     st.session_state['thread_id'] = None
@@ -83,18 +54,15 @@ for message in st.session_state.messages:
         st.markdown(message["content"])
 
 user_question = st.chat_input("What is up?")
-uploaded_file = st.file_uploader("Upload a file (optional)")
 
 if user_question:
     st.session_state.messages.append({"role": "user", "content": user_question})
     with st.chat_message("user"):
         st.markdown(user_question)
-        if uploaded_file is not None:
-            st.write("Uploaded file:", uploaded_file.name)
 
     with st.chat_message("assistant"):
         with st.spinner('Waiting for the assistant to respond...'):
-            result, st.session_state['thread_id'] = run_assistant(user_question, uploaded_file, st.session_state['thread_id'])
+            result, st.session_state['thread_id'] = run_assistant(user_question, st.session_state['thread_id'])
             if isinstance(result, str):
                 st.error(result)
             else:
